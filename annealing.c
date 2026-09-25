@@ -4,6 +4,8 @@
 #include <math.h>
 
 #define ESCALA 20 
+#define LINHAS 91
+
 
 void inicia_vetor(int *vetor){
 
@@ -34,16 +36,36 @@ void inicia_vetor(int *vetor){
     return;
 }
 
-void pega_clausulas(){
-    
+void pega_clausulas(const char* nome_arquivo, int vetor[][3]){
+    FILE *arquivo = fopen(nome_arquivo, "r");
+    int i = 0;
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo :(\n");
+        exit(1);
+    }
+
+    char linha[256];
+
+    while(fgets(linha, sizeof(linha), arquivo) != NULL) {
+        sscanf(linha, "%d %d %d", &vetor[i][0], &vetor[i][1], &vetor[i][2]);
+        i++;
+    }
+
+    fclose(arquivo);
 }
 
 int main() { 
 
     int vetor[ESCALA] = {0};
+    int dados[LINHAS][3];
 
     inicia_vetor(vetor);
-    pega_clausulas
+    pega_clausulas("instances/20.cnf", dados);
+    for(int i = 0; i < LINHAS; i++) {
+        for(int j = 0; j < 3; j ++) {
+            printf(" %d ", dados[i][j]);
+        }
+    }
 
     return 0;
 }
