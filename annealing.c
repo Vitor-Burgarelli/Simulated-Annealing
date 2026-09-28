@@ -5,7 +5,7 @@
 
 #define ESCALA 20 
 #define LINHAS 91
-
+#define ITERACOES 200000
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
@@ -92,7 +92,20 @@ double calcula_qualidade(int *valores, int dados[][3]){
 
 }
 
+void atriubui_vetor(int* vetor_receber, int* vetor_passar, tam){
+    for(int i = 0; i < tam; i++){
+        vetor_receber[i] = vetor_passar[i];
+    }
+}
+
 int* annealing(int *valores, int **dados, iterações, temp_inicial){
+
+    double delta = 0;
+    int valores_atual[ESCALA] = {0};
+
+    for(int i = 0; i < ESCALA; i++){
+        valores_atual[i] = valores[i];
+    }
 
     int valores_vizinho[ESCALA] = {0};
 
@@ -103,8 +116,16 @@ int* annealing(int *valores, int **dados, iterações, temp_inicial){
 
         gerar_vizinho(valores_vizinho);
         qualidade_vizinho = calcula_qualidade(valores_vizinho, dados);
+        delta = qualidade_vizinho - qualidade_atual;
 
-
+        if(delta < 0){
+            atribui_vetor(valores, valores_vizinho, ESCALA);    
+            if(qualidade_vizinho < calcula_qualidade(valores_atual)){
+                atribui_vetor(valores_atual, valores_vizinho);
+            }
+        }else {
+            
+        }
 
     }
 
@@ -113,10 +134,13 @@ int* annealing(int *valores, int **dados, iterações, temp_inicial){
 
 void gerar_vizinho(int* valores_vizinho){
 
-    n = ESCALA;
-    int indice = rand() % n;
-
-    valores_vizinho[indice] = 1 - valores_vizinho[indice];
+    int indice = -1;
+    int n = ESCALA;
+    int mudancas = ESCALA * (5/100)
+    for(int i = 0; i<mudancas ; i++){
+        indice = rand() % n;
+        valores_vizinho[indice] = 1 - valores_vizinho[indice];
+    }
 }
 
 int main() { 
