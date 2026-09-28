@@ -13,8 +13,6 @@
 
 void inicia_valores(int *valores){
 
-    srand(time(NULL));
-
     int k = rand() % (ESCALA + 1); 
 
     for (int i = 0; i < k; i++) {
@@ -98,10 +96,14 @@ void atriubui_vetor(int* vetor_receber, int* vetor_passar, tam){
     }
 }
 
-int* annealing(int *valores, int **dados, iterações, temp_inicial){
+int* annealing(int *valores, int **dados,int iterações, double t_inicial){
 
+    double euler = exp(1.0);
     double delta = 0;
     int valores_atual[ESCALA] = {0};
+    double t_corrente = t_inicial;
+
+    double it_max = (double)ITERACOES;
 
     for(int i = 0; i < ESCALA; i++){
         valores_atual[i] = valores[i];
@@ -125,11 +127,15 @@ int* annealing(int *valores, int **dados, iterações, temp_inicial){
             }
         }else {
             
+            double x = (double)rand() / RAND_MAX;
+            if(x < pow(euler, (-delta/t_corrente))){
+                atribui_vetor(valores_atual, valores_vizinho);
+            }
         }
-
+        t_corrente = pow((1 - ((double)i/ it_max)), 5);
     }
 
-    return valores;
+    return valores_atual;
 }
 
 void gerar_vizinho(int* valores_vizinho){
