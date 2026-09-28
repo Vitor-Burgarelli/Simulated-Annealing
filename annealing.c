@@ -9,6 +9,7 @@
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
+//Delta = qualidade_atual - qualidade_vizinho 
 
 void inicia_valores(int *valores){
 
@@ -91,8 +92,36 @@ double calcula_qualidade(int *valores, int dados[][3]){
 
 }
 
+int* annealing(int *valores, int **dados, iterações, temp_inicial){
+
+    int valores_vizinho[ESCALA] = {0};
+
+    double qualidade_atual = calcula_qualidade(valores, dados);   //s(valor otimo inicial)
+    double qualidade_vizinho = 0.0;
+
+    for(int i = 0; i < iterações; i++){
+
+        gerar_vizinho(valores_vizinho);
+        qualidade_vizinho = calcula_qualidade(valores_vizinho, dados);
+
+
+
+    }
+
+    return valores;
+}
+
+void gerar_vizinho(int* valores_vizinho){
+
+    n = ESCALA;
+    int indice = rand() % n;
+
+    valores_vizinho[indice] = 1 - valores_vizinho[indice];
+}
 
 int main() { 
+
+    srand(time(NULL));
 
     int valores[ESCALA] = {0};
     int dados[LINHAS][3];
