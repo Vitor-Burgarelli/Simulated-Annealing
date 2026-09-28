@@ -9,10 +9,9 @@
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
-//Delta = qualidade_atual - qualidade_vizinho 
+//Delta = qualidade_vizinho - qualidade_atual
 
 void inicia_valores(int *valores){
-
     int k = rand() % (ESCALA + 1); 
 
     for (int i = 0; i < k; i++) {
@@ -26,16 +25,12 @@ void inicia_valores(int *valores){
         valores[j] = temp;
     }
     
-
     printf("Quantidade de 1s (k) = %d\n\n", k);
-    
     printf("Valores Iniciais:\n");
     for (int i = 0; i < ESCALA; i++) {
         printf("%d ", valores[i]);
     }
     printf("\n");
-
-    return;
 }
 
 void pega_clausulas(const char* nome_arquivo, int dados[][3]){
@@ -57,20 +52,16 @@ void pega_clausulas(const char* nome_arquivo, int dados[][3]){
 }
 
 double calcula_qualidade(int *valores, int dados[][3]){
-
     int qtd_clausulas = LINHAS;
     int qtd_falsas = 0;
 
     for(int i = 0; i < qtd_clausulas; i++){
-
         int contador = 0;
         for(int j = 0; j < 3; j++){
-
             if(dados[i][j] < 0){
                 if ((valores[(dados[i][j] * (-1)) - 1]) == 1){
                     contador++;
                 }
-
             }else if (dados[i][j] > 0){
                 if (valores[dados[i][j] - 1] == 0){
                     contador++;
@@ -80,77 +71,92 @@ double calcula_qualidade(int *valores, int dados[][3]){
         if(contador == 3){ qtd_falsas++;}
     }
 
-
-    double funcao_qualidade = (double)qtd_falsas/qtd_clausulas;
-
-    printf("quntidade de clausulas = %d", qtd_clausulas);
-    printf("\nqtd_falsas = %d\nfuncao_qualidade = %lf", qtd_falsas, funcao_qualidade);
-
-    return funcao_qualidade;
-
+    return (double)qtd_falsas/qtd_clausulas;
 }
 
-void atriubui_vetor(int* vetor_receber, int* vetor_passar, tam){
+void atribui_vetor(int* vetor_receber, int* vetor_passar, int tam){
     for(int i = 0; i < tam; i++){
         vetor_receber[i] = vetor_passar[i];
     }
 }
 
-int* annealing(int *valores, int **dados,int iterações, double t_inicial){
-
-    double euler = exp(1.0);
-    double delta = 0;
-    int valores_atual[ESCALA] = {0};
-    double t_corrente = t_inicial;
-
-    double it_max = (double)ITERACOES;
-
-    for(int i = 0; i < ESCALA; i++){
-        valores_atual[i] = valores[i];
+void gerar_vizinho(int* valores_vizinho){
+    int n = ESCALA;
+    int mudancas = ESCALA * (5.0/100.0);
+    
+    if (mudancas < 1) {
+        mudancas = 1;
     }
 
+    for(int i = 0; i < mudancas ; i++){
+        int indice = rand() % n;
+        valores_vizinho[indice] = 1 - valores_vizinho[indice];
+    }
+}
+
+void annealing(int *valores, int dados[][3], int iteracoes){
+    double delta = 0;
+    int valores_atual[ESCALA] = {0};
+    double t_corrente = 1.0;
+    double it_max = (double)iteracoes;
+    
+    atribui_vetor(valores_atual, valores, ESCALA);
     int valores_vizinho[ESCALA] = {0};
-
-    double qualidade_atual = calcula_qualidade(valores, dados);   //s(valor otimo inicial)
+    
+    double qualidade_atual = calcula_qualidade(valores_atual, dados);
+    double qualidade_melhor = qualidade_atual;
     double qualidade_vizinho = 0.0;
+    
+    // Abertura do ficheiro para registar os dados do gráfico
+    FILE *arquivo_grafico = fopen("convergencia.csv", "w");
+    if (arquivo_grafico == NULL) {
+        printf("Erro ao criar o ficheiro de convergência.\n");
+        exit(1);
+    }
+    // Cabeçalho do CSV
+    fprintf(arquivo_grafico, "iteracao,qualidade_atual,qualidade_melhor\n");
+    
+    for(int i = 0; i < iteracoes; i++){
+        t_corrente = pow((1.0 - ((double)i / it_max)), 5.0);
+        
+        if (t_corrente < 1e-10) {
+            t_corrente = 1e-10;
+        }
 
-    for(int i = 0; i < iterações; i++){
-
+        atribui_vetor(valores_vizinho, valores_atual, ESCALA);
         gerar_vizinho(valores_vizinho);
         qualidade_vizinho = calcula_qualidade(valores_vizinho, dados);
         delta = qualidade_vizinho - qualidade_atual;
 
         if(delta < 0){
-            atribui_vetor(valores, valores_vizinho, ESCALA);    
-            if(qualidade_vizinho < calcula_qualidade(valores_atual)){
-                atribui_vetor(valores_atual, valores_vizinho);
+            atribui_vetor(valores_atual, valores_vizinho, ESCALA);
+            qualidade_atual = qualidade_vizinho;
+
+            if(qualidade_atual < qualidade_melhor){
+                atribui_vetor(valores, valores_atual, ESCALA);
+                qualidade_melhor = qualidade_atual;
             }
-        }else {
-            
+        } else {
             double x = (double)rand() / RAND_MAX;
-            if(x < pow(euler, (-delta/t_corrente))){
-                atribui_vetor(valores_atual, valores_vizinho);
+            if(x < exp(-delta / t_corrente)){
+                atribui_vetor(valores_atual, valores_vizinho, ESCALA);
+                qualidade_atual = qualidade_vizinho; 
             }
         }
-        t_corrente = pow((1 - ((double)i/ it_max)), 5);
+        
+        // Regista os dados a cada 100 iterações para não sobrecarregar o I/O
+        if (i % 100 == 0) {
+            fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
+        }
     }
-
-    return valores_atual;
-}
-
-void gerar_vizinho(int* valores_vizinho){
-
-    int indice = -1;
-    int n = ESCALA;
-    int mudancas = ESCALA * (5/100)
-    for(int i = 0; i<mudancas ; i++){
-        indice = rand() % n;
-        valores_vizinho[indice] = 1 - valores_vizinho[indice];
-    }
+    
+    // Regista a última iteração e fecha o ficheiro
+    fprintf(arquivo_grafico, "%d,%lf,%lf\n", iteracoes, qualidade_atual, qualidade_melhor);
+    fclose(arquivo_grafico);
+    printf("Dados de convergência guardados em 'convergencia.csv'.\n");
 }
 
 int main() { 
-
     srand(time(NULL));
 
     int valores[ESCALA] = {0};
@@ -158,15 +164,19 @@ int main() {
 
     inicia_valores(valores);
     pega_clausulas("instances/20.cnf", dados);
-    for(int i = 0; i < LINHAS; i++) {
-        for(int j = 0; j < 3; j ++) {
-            printf(" %d ", dados[i][j]);
-        }
-        printf("\n");
-    }
 
     double funcao_qualidade = calcula_qualidade(valores, dados);
+    printf("Qualidade inicial: %lf\n", funcao_qualidade);
 
+    annealing(valores, dados, ITERACOES);
+
+    printf("Resultado final:\n");
+    for(int i = 0; i < ESCALA; i++) {
+        printf(" %d ", valores[i]);
+    }
+    
+    funcao_qualidade = calcula_qualidade(valores, dados);
+    printf("\nQualidade final = %lf\n", funcao_qualidade);
 
     return 0;
 }
