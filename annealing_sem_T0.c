@@ -3,9 +3,9 @@
 #include <time.h>
 #include <math.h>
 
-#define ESCALA 20 
-#define LINHAS 91
-#define ITERACOES 200000
+#define ESCALA 100 
+#define LINHAS 430
+#define ITERACOES 15000000
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
@@ -44,8 +44,9 @@ void pega_clausulas(const char* nome_arquivo, int dados[][3]){
     char linha[256];
 
     while(fgets(linha, sizeof(linha), arquivo) != NULL) {
-        sscanf(linha, "%d %d %d", &dados[i][0], &dados[i][1], &dados[i][2]);
-        i++;
+        int lidos = sscanf(linha, "%d %d %d", &dados[i][0], &dados[i][1], &dados[i][2]);
+        if(lidos == 3) 
+            i++;
     }
 
     fclose(arquivo);
@@ -108,7 +109,7 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     double qualidade_vizinho = 0.0;
     
     // Abertura do ficheiro para registar os dados do gráfico
-    FILE *arquivo_grafico = fopen("convergencia.csv", "w");
+    FILE *arquivo_grafico = fopen("convergencia_sem_t0.csv", "w");
     if (arquivo_grafico == NULL) {
         printf("Erro ao criar o ficheiro de convergência.\n");
         exit(1);
@@ -116,8 +117,9 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     // Cabeçalho do CSV
     fprintf(arquivo_grafico, "iteracao,qualidade_atual,qualidade_melhor\n");
     
-    for(int i = 0; i < iteracoes; i++){
-        t_corrente = pow((1.0 - ((double)i / it_max)), 1.0);
+    int i;
+    for(i = 0; i < iteracoes; i++){
+        t_corrente = pow((1.0 - ((double)i / it_max)), 5.0);
         
         if (t_corrente < 1e-10) {
             t_corrente = 1e-10;
@@ -135,6 +137,9 @@ void annealing(int *valores, int dados[][3], int iteracoes){
             if(qualidade_atual < qualidade_melhor){
                 atribui_vetor(valores, valores_atual, ESCALA);
                 qualidade_melhor = qualidade_atual;
+                if(qualidade_melhor == 0.0) {
+                    break;
+                }
             }
         } else {
             double x = (double)rand() / RAND_MAX;
@@ -151,9 +156,9 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     }
     
     // Regista a última iteração e fecha o ficheiro
-    fprintf(arquivo_grafico, "%d,%lf,%lf\n", iteracoes, qualidade_atual, qualidade_melhor);
+    fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
     fclose(arquivo_grafico);
-    printf("Dados de convergência guardados em 'convergencia.csv'.\n");
+    printf("Dados de convergência guardados em 'convergencia_sem_T0.csv'.\n");
 }
 
 int main() { 
@@ -163,7 +168,7 @@ int main() {
     int dados[LINHAS][3];
 
     inicia_valores(valores);
-    pega_clausulas("instances/20.cnf", dados);
+    pega_clausulas("instances/100.cnf", dados);
 
     double funcao_qualidade = calcula_qualidade(valores, dados);
     printf("Qualidade inicial: %lf\n", funcao_qualidade);

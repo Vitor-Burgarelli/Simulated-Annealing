@@ -4,10 +4,10 @@
 #include <math.h>
 #include <string.h>
 
-#define ESCALA 20
-#define LINHAS 91
+#define ESCALA 100
+#define LINHAS 430
 #define ITERACOES 200000
-#define N_RUNS 30   // quantas execucoes independentes por valor de t
+#define N_RUNS 20   // quantas execucoes independentes por valor de t
 
 // FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 // Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
@@ -131,8 +131,8 @@ int annealing(int *valores, int dados[][3], int iteracoes, double fator_resfriam
     if (qualidade_melhor == 0.0) {
         iteracao_convergencia = 0;
     }
-
-    for(int i = 0; i < iteracoes; i++){
+    int i;
+    for(i = 0; i < iteracoes; i++){
         t_corrente = pow((1.0 - ((double)i / it_max)), fator_resfriamento);
 
         if (t_corrente < 1e-10) {
@@ -151,6 +151,9 @@ int annealing(int *valores, int dados[][3], int iteracoes, double fator_resfriam
             if(qualidade_atual < qualidade_melhor){
                 atribui_vetor(valores, valores_atual, ESCALA);
                 qualidade_melhor = qualidade_atual;
+                if(qualidade_melhor == 0.0) {
+                    break;
+                }
 
                 if (iteracao_convergencia == -1 && qualidade_melhor == 0.0) {
                     iteracao_convergencia = i + 1;
@@ -170,7 +173,7 @@ int annealing(int *valores, int dados[][3], int iteracoes, double fator_resfriam
     }
 
     if (arquivo_grafico != NULL) {
-        fprintf(arquivo_grafico, "%d,%lf,%lf\n", iteracoes, qualidade_atual, qualidade_melhor);
+        fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
         fclose(arquivo_grafico);
     }
 
@@ -185,7 +188,7 @@ int main() {
     srand(time(NULL));  // uma unica vez, fora dos loops de run
 
     int dados[LINHAS][3];
-    pega_clausulas("instances/20.cnf", dados);
+    pega_clausulas("instances/100.cnf", dados);
 
     FILE *resultados = fopen("resultados.csv", "w");
     if (resultados == NULL) {
