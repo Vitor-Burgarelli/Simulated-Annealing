@@ -6,7 +6,8 @@
 #define ESCALA 100 
 #define LINHAS 430
 #define ITERACOES 15000000
-#define T_INICIAL 
+#define NUM_VIZINHOS_T0 50 // Número de vizinhos a testar para calcular a T0
+#define RODAGENS 5
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
@@ -96,6 +97,29 @@ void gerar_vizinho(int* valores_vizinho){
     }
 }
 
+double calcula_temperatura_inicial(int *valores_iniciais, int dados[][3], int num_vizinhos) {
+    int valores_vizinho[ESCALA] = {0};
+    double maior_custo = 0.0;
+    double custo_atual = 0.0;
+
+    for (int i = 0; i < num_vizinhos; i++) {
+        atribui_vetor(valores_vizinho, valores_iniciais, ESCALA);
+        gerar_vizinho(valores_vizinho);
+        
+        custo_atual = calcula_qualidade(valores_vizinho, dados);
+        
+        if (custo_atual > maior_custo) {
+            maior_custo = custo_atual;
+        }
+    }
+
+    if (maior_custo <= 0.0001) {
+        maior_custo = 1.0; 
+    }
+
+    return maior_custo;
+}
+
 void annealing(int *valores, int dados[][3], int iteracoes){
     double delta = 0;
     int valores_atual[ESCALA] = {0};
@@ -109,18 +133,65 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     double qualidade_melhor = qualidade_atual;
     double qualidade_vizinho = 0.0;
     
-    // Abertura do ficheiro para registar os dados do gráfico
+    // Calcula a T0 usando a heurística de amostragem de vizinhança
+    double T0 = calcula_temperatura_inicial(valores, dados, NUM_VIZINHOS_T0);
+    double TN = 0.0001;    // Temperatura Final (Tn) requerida pelas fórmulas
+    double N = it_max;
+    
+    printf("\nTemperatura inicial (T0) definida heuristicamente: %lf\n", T0);
+
     FILE *arquivo_grafico = fopen("convergencia_sem_t0.csv", "w");
     if (arquivo_grafico == NULL) {
         printf("Erro ao criar o ficheiro de convergência.\n");
         exit(1);
     }
-    // Cabeçalho do CSV
     fprintf(arquivo_grafico, "iteracao,qualidade_atual,qualidade_melhor\n");
     
     int i;
     for(i = 0; i < iteracoes; i++){
-        t_corrente = pow((1.0 - ((double)i / it_max)), 5.0);
+        
+        double iter = (double)i;
+        double A, B;
+
+        /* ESCOLHA APENAS UMA FORMULA DESCOMENTANDO-A E COMENTANDO AS DEMAIS: */
+
+        // Cooling Schedule 0
+        //t_corrente = T0 - iter * ((T0 - TN) / N);
+
+        // Cooling Schedule 1
+         t_corrente = T0 * pow((TN / T0), (iter / N));
+
+        // Cooling Schedule 2
+        //A = ((T0 - TN) * (N + 1.0)) / N;
+        //B = T0 - A;
+        //t_corrente = (A / (iter + 1.0)) + B;
+
+        // Cooling Schedule 3
+        //A = log(T0 - TN) / log(N); 
+        //t_corrente = T0 - pow(iter, A);
+
+        // Cooling Schedule 4 (Sigmoid)
+        // t_corrente = ((T0 - TN) / (1.0 + exp(3.0 * (iter - N / 2.0)))) + TN;
+
+        // Cooling Schedule 5
+        //t_corrente = 0.5 * (T0 - TN) * (1.0 + cos((iter * 3.14159265358979323846) / N)) + TN;
+
+        // Cooling Schedule 6
+        // t_corrente = 0.5 * (T0 - TN) * (1.0 - tanh((10.0 * iter) / N - 5.0)) + TN;
+
+        // Cooling Schedule 7
+        // t_corrente = ((T0 - TN) / cosh((10.0 * iter) / N)) + TN;
+
+        // Cooling Schedule 8
+        // A = (1.0 / N) * log(T0 / TN);
+        // t_corrente = T0 * exp(-A * iter);
+
+        // Cooling Schedule 9
+        // A = (1.0 / (N * N)) * log(T0 / TN);
+        // t_corrente = T0 * exp(-A * iter * iter);
+
+        // Formula Original
+        //t_corrente = T0 * pow((1.0 - (iter / N)), 5.0);
         
         if (t_corrente < 1e-10) {
             t_corrente = 1e-10;
@@ -139,7 +210,7 @@ void annealing(int *valores, int dados[][3], int iteracoes){
                 atribui_vetor(valores, valores_atual, ESCALA);
                 qualidade_melhor = qualidade_atual;
                 if(qualidade_melhor == 0.0) {
-                    break;
+                    break; // Solução perfeita encontrada
                 }
             }
         } else {
@@ -150,16 +221,14 @@ void annealing(int *valores, int dados[][3], int iteracoes){
             }
         }
         
-        // Regista os dados a cada 100 iterações para não sobrecarregar o I/O
         if (i % 100 == 0) {
             fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
         }
     }
     
-    // Regista a última iteração e fecha o arquivo
     fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
     fclose(arquivo_grafico);
-    printf("Dados de convergência guardados em 'convergencia_sem_T0.csv'.\n");
+    printf("Dados de convergência guardados em 'convergencia_sem_t0.csv'.\n");
 }
 
 int main() { 
@@ -169,17 +238,56 @@ int main() {
     int dados[LINHAS][3];
 
     inicia_valores(valores);
-    pega_clausulas("instances/250.cnf", dados);
+    pega_clausulas("instances/100.cnf", dados);
 
     double funcao_qualidade = calcula_qualidade(valores, dados);
-    printf("Qualidade inicial: %lf\n", funcao_qualidade);
+    printf("Qualidade inicial (estado raiz): %lf\n", funcao_qualidade);
+double media;
+    double desvio; 
+    double somatorio_media = 0.0;
+    double somatorio_desvios = 0.0;
+    double temp; 
+    int deu_certo = 0;
+    
+    // Vetor para guardar a qualidade final de cada execução
+    double resultados[RODAGENS]; 
 
-    annealing(valores, dados, ITERACOES);
-
-    printf("Resultado final:\n");
-    for(int i = 0; i < ESCALA; i++) {
-        printf(" %d ", valores[i]);
+    for(int i = 0; i < RODAGENS; i++){
+        // 1. Gera um novo estado inicial aleatório para esta rodagem
+        inicia_valores(valores); 
+        
+        // 2. Executa a otimização
+        annealing(valores, dados, ITERACOES);
+        
+        // 3. Avalia e guarda o resultado
+        temp = calcula_qualidade(valores, dados);
+        resultados[i] = temp;
+        somatorio_media += temp; 
+        
+        if(temp == 0.0){
+            deu_certo++;
+        }
     }
+
+    // Calcula a média final
+    media = somatorio_media / (double)RODAGENS;
+
+    // Calcula o somatório do quadrado das diferenças (Variância)
+    for(int i = 0; i < RODAGENS; i++){
+        somatorio_desvios += pow(resultados[i] - media, 2.0);
+    }
+
+    // Calcula o Desvio Padrão Amostral (divide por N-1)
+    desvio = sqrt(somatorio_desvios / (RODAGENS - 1.0));
+
+    printf("Media da funcao qualidade nas %d rodagens: %lf\n", RODAGENS, media);
+    printf("Desvio padrao nas rodagens: %lf\n", desvio);
+    printf("Vezes que encontrou solucao perfeita: %d\n", deu_certo);
+
+    //printf("\nResultado final:\n");
+    /*for(int i = 0; i < ESCALA; i++) {
+        printf(" %d ", valores[i]);
+    }*
     
     funcao_qualidade = calcula_qualidade(valores, dados);
     printf("\nQualidade final = %lf\n", funcao_qualidade);
