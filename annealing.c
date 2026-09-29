@@ -117,7 +117,7 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     fprintf(arquivo_grafico, "iteracao,qualidade_atual,qualidade_melhor\n");
     
     for(int i = 0; i < iteracoes; i++){
-        t_corrente = pow((1.0 - ((double)i / it_max)), 5.0);
+        t_corrente = pow((1.0 - ((double)i / it_max)), 1.0);
         
         if (t_corrente < 1e-10) {
             t_corrente = 1e-10;
