@@ -5,7 +5,7 @@
 
 #define ESCALA 100 
 #define LINHAS 430
-#define ITERACOES 15000000
+#define ITERACOES 10000000
 #define NUM_VIZINHOS_T0 50 // Número de vizinhos a testar para calcular a T0
 #define RODAGENS 5
 
@@ -120,7 +120,7 @@ double calcula_temperatura_inicial(int *valores_iniciais, int dados[][3], int nu
     return maior_custo;
 }
 
-void annealing(int *valores, int dados[][3], int iteracoes){
+void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
     double delta = 0;
     int valores_atual[ESCALA] = {0};
     double t_corrente = 1.0;
@@ -228,7 +228,16 @@ void annealing(int *valores, int dados[][3], int iteracoes){
     
     fprintf(arquivo_grafico, "%d,%lf,%lf\n", i, qualidade_atual, qualidade_melhor);
     fclose(arquivo_grafico);
-    printf("Dados de convergência guardados em 'convergencia_sem_t0.csv'.\n");
+
+    printf("Iterações da rodagem %d = %d\n", rodagem, i);
+    printf("Quantidade de erradas da rodagem %d = %d\n", rodagem, (int)(qualidade_atual * LINHAS));
+    printf("Resultado da função objetivo (falsas/total): %lf\n", qualidade_atual);
+
+    printf("Vetor Final: [");
+    for(int j = 0; j < ESCALA; j++){
+        printf(" %d ", valores[j]);
+    }
+    printf("]\n");
 }
 
 int main() { 
@@ -237,16 +246,14 @@ int main() {
     int valores[ESCALA] = {0};
     int dados[LINHAS][3];
 
-    inicia_valores(valores);
     pega_clausulas("instances/100.cnf", dados);
 
-    double funcao_qualidade = calcula_qualidade(valores, dados);
-    printf("Qualidade inicial (estado raiz): %lf\n", funcao_qualidade);
-double media;
+    double media;
     double desvio; 
     double somatorio_media = 0.0;
     double somatorio_desvios = 0.0;
     double temp; 
+    double funcao_qualidade;
     int deu_certo = 0;
     
     // Vetor para guardar a qualidade final de cada execução
@@ -254,10 +261,12 @@ double media;
 
     for(int i = 0; i < RODAGENS; i++){
         // 1. Gera um novo estado inicial aleatório para esta rodagem
+        printf("\n--------------RODAGEM %d--------------\n", i+1);
+
         inicia_valores(valores); 
         
         // 2. Executa a otimização
-        annealing(valores, dados, ITERACOES);
+        annealing(valores, dados, ITERACOES, (i+1));
         
         // 3. Avalia e guarda o resultado
         temp = calcula_qualidade(valores, dados);
@@ -267,6 +276,8 @@ double media;
         if(temp == 0.0){
             deu_certo++;
         }
+
+        printf("\n--------------FIM RODAGEM %d--------------\n", i+1);
     }
 
     // Calcula a média final
@@ -287,10 +298,7 @@ double media;
     //printf("\nResultado final:\n");
     /*for(int i = 0; i < ESCALA; i++) {
         printf(" %d ", valores[i]);
-    }*
-    
-    funcao_qualidade = calcula_qualidade(valores, dados);
-    printf("\nQualidade final = %lf\n", funcao_qualidade);
+    }*/
 
     return 0;
 }
