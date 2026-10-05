@@ -3,9 +3,9 @@
 #include <time.h>
 #include <math.h>
 
-#define ESCALA 100 
-#define LINHAS 430
-#define ITERACOES 10000000
+#define ESCALA 250 
+#define LINHAS 1065
+#define ITERACOES 5000000
 #define NUM_VIZINHOS_T0 50 // Número de vizinhos a testar para calcular a T0
 #define RODAGENS 5
 
@@ -39,16 +39,27 @@ void pega_clausulas(const char* nome_arquivo, int dados[][3]){
     FILE *arquivo = fopen(nome_arquivo, "r");
     int i = 0;
     if (arquivo == NULL) {
-        printf("Erro ao abrir o arquivo :(\n");
+        perror("Erro ao abrir o arquivo");
         exit(1);
     }
 
     char linha[256];
 
-    while(fgets(linha, sizeof(linha), arquivo) != NULL) {
-        int lidos = sscanf(linha, "%d %d %d", &dados[i][0], &dados[i][1], &dados[i][2]);
-        if(lidos == 3) 
+    // Lê garantindo que não ultrapasse a capacidade de 'LINHAS'
+    while(i < LINHAS && fgets(linha, sizeof(linha), arquivo) != NULL) {
+        // Ignora comentários ('c') e linha de cabeçalho do formato DIMACS ('p')
+        if (linha[0] == 'c' || linha[0] == 'p' || linha[0] == '%' || linha[0] == '0' || linha[0] == '\n') {
+            continue;
+        }
+
+        int v1, v2, v3;
+        // Lê os 3 números da cláusula
+        if(sscanf(linha, "%d %d %d", &v1, &v2, &v3) == 3) {
+            dados[i][0] = v1;
+            dados[i][1] = v2;
+            dados[i][2] = v3;
             i++;
+        }
     }
 
     fclose(arquivo);
@@ -85,8 +96,9 @@ void atribui_vetor(int* vetor_receber, int* vetor_passar, int tam){
 
 void gerar_vizinho(int* valores_vizinho){
     int n = ESCALA;
-    int mudancas = ESCALA * (5.0/100.0);
-    
+    //int mudancas = ESCALA * (5.0/100.0);
+    int mudancas = 1;
+
     if (mudancas < 1) {
         mudancas = 1;
     }
@@ -99,25 +111,29 @@ void gerar_vizinho(int* valores_vizinho){
 
 double calcula_temperatura_inicial(int *valores_iniciais, int dados[][3], int num_vizinhos) {
     int valores_vizinho[ESCALA] = {0};
-    double maior_custo = 0.0;
-    double custo_atual = 0.0;
+    
+    // Avalia o custo da solução inicial como referência base do pior caso
+    double pior_custo = calcula_qualidade(valores_iniciais, dados);
+    double custo_vizinho = 0.0;
 
     for (int i = 0; i < num_vizinhos; i++) {
         atribui_vetor(valores_vizinho, valores_iniciais, ESCALA);
         gerar_vizinho(valores_vizinho);
         
-        custo_atual = calcula_qualidade(valores_vizinho, dados);
+        custo_vizinho = calcula_qualidade(valores_vizinho, dados);
         
-        if (custo_atual > maior_custo) {
-            maior_custo = custo_atual;
+        // Em problemas de minimização, o pior resultado é o maior valor de custo/erro
+        if (custo_vizinho > pior_custo) {
+            pior_custo = custo_vizinho;
         }
     }
 
-    if (maior_custo <= 0.0001) {
-        maior_custo = 1.0; 
+    // Salvaguarda para evitar divisões por zero ou T0 nulo
+    if (pior_custo <= 0.0001) {
+        pior_custo = 1.0; 
     }
 
-    return maior_custo;
+    return pior_custo;
 }
 
 void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
@@ -140,7 +156,7 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
     
     printf("\nTemperatura inicial (T0) definida heuristicamente: %lf\n", T0);
 
-    FILE *arquivo_grafico = fopen("convergencia_sem_t0.csv", "w");
+    FILE *arquivo_grafico = fopen("convergencia_com_t0.csv", "w");
     if (arquivo_grafico == NULL) {
         printf("Erro ao criar o ficheiro de convergência.\n");
         exit(1);
@@ -159,7 +175,7 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
         //t_corrente = T0 - iter * ((T0 - TN) / N);
 
         // Cooling Schedule 1
-         t_corrente = T0 * pow((TN / T0), (iter / N));
+        //t_corrente = T0 * pow((TN / T0), (iter / N));
 
         // Cooling Schedule 2
         //A = ((T0 - TN) * (N + 1.0)) / N;
@@ -180,7 +196,7 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
         // t_corrente = 0.5 * (T0 - TN) * (1.0 - tanh((10.0 * iter) / N - 5.0)) + TN;
 
         // Cooling Schedule 7
-        // t_corrente = ((T0 - TN) / cosh((10.0 * iter) / N)) + TN;
+         t_corrente = ((T0 - TN) / cosh((10.0 * iter) / N)) + TN;
 
         // Cooling Schedule 8
         // A = (1.0 / N) * log(T0 / TN);
@@ -246,7 +262,7 @@ int main() {
     int valores[ESCALA] = {0};
     int dados[LINHAS][3];
 
-    pega_clausulas("instances/100.cnf", dados);
+    pega_clausulas("instances/250.cnf", dados);
 
     double media;
     double desvio; 
