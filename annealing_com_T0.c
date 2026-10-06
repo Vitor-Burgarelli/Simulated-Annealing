@@ -246,8 +246,8 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
     fclose(arquivo_grafico);
 
     printf("Iterações da rodagem %d = %d\n", rodagem, i);
-    printf("Quantidade de erradas da rodagem %d = %d\n", rodagem, (int)(qualidade_atual * LINHAS));
-    printf("Resultado da função objetivo (falsas/total): %lf\n", qualidade_atual);
+    printf("Quantidade de erradas da rodagem %d = %d\n", rodagem, (int)(qualidade_melhor * LINHAS));
+    printf("Resultado da função objetivo (falsas/total): %lf\n", qualidade_melhor);
 
     printf("Vetor Final: [");
     for(int j = 0; j < ESCALA; j++){
