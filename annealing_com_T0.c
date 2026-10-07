@@ -3,11 +3,11 @@
 #include <time.h>
 #include <math.h>
 
-#define ESCALA 250 
-#define LINHAS 1065
+#define ESCALA 250 //20 //100 //250 
+#define LINHAS 1065 //91 //430 //1065
 #define ITERACOES 5000000
 #define NUM_VIZINHOS_T0 50 // Número de vizinhos a testar para calcular a T0
-#define RODAGENS 5
+#define RODAGENS 8
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
