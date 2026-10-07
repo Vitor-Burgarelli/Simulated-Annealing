@@ -7,7 +7,8 @@
 #define LINHAS 1065 //91 //430 //1065
 #define ITERACOES 5000000
 #define NUM_VIZINHOS_T0 50 // Número de vizinhos a testar para calcular a T0
-#define RODAGENS 8
+#define RODAGENS 10
+#define SAMAX 100 // Número de iterações para equilíbrio térmico (paramétrico)
 
 //FUNCAO OBJETIVO -> minimizar clausulas falsas!!
 //Funcao de qualidade -> quantidade de clausulas falsas / total clausulas (linhas)
@@ -136,11 +137,11 @@ double calcula_temperatura_inicial(int *valores_iniciais, int dados[][3], int nu
     return pior_custo;
 }
 
-void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
+// samax inserido como parâmetro na função
+void annealing(int *valores, int dados[][3], int iteracoes, int rodagem, int samax){
     double delta = 0;
     int valores_atual[ESCALA] = {0};
     double t_corrente = 1.0;
-    double it_max = (double)iteracoes;
     
     atribui_vetor(valores_atual, valores, ESCALA);
     int valores_vizinho[ESCALA] = {0};
@@ -152,7 +153,10 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
     // Calcula a T0 usando a heurística de amostragem de vizinhança
     double T0 = calcula_temperatura_inicial(valores, dados, NUM_VIZINHOS_T0);
     double TN = 0.0001;    // Temperatura Final (Tn) requerida pelas fórmulas
-    double N = it_max;
+    
+    // N passa a ser o total de degraus de resfriamento, invés de iterações totais
+    double N = (double)(iteracoes / samax);
+    if (N < 1.0) N = 1.0;
     
     printf("\nTemperatura inicial (T0) definida heuristicamente: %lf\n", T0);
 
@@ -166,51 +170,54 @@ void annealing(int *valores, int dados[][3], int iteracoes, int rodagem){
     int i;
     for(i = 0; i < iteracoes; i++){
         
-        double iter = (double)i;
-        double A, B;
+        // A temperatura e seu decaimento só são calculados a cada "samax" iterações
+        if (i % samax == 0) {
+            double iter = (double)(i / samax);
+            double A, B;
 
-        /* ESCOLHA APENAS UMA FORMULA DESCOMENTANDO-A E COMENTANDO AS DEMAIS: */
+            /* ESCOLHA APENAS UMA FORMULA DESCOMENTANDO-A E COMENTANDO AS DEMAIS: */
 
-        // Cooling Schedule 0
-        //t_corrente = T0 - iter * ((T0 - TN) / N);
+            // Cooling Schedule 0
+            //t_corrente = T0 - iter * ((T0 - TN) / N);
 
-        // Cooling Schedule 1
-        //t_corrente = T0 * pow((TN / T0), (iter / N));
+            // Cooling Schedule 1
+            //t_corrente = T0 * pow((TN / T0), (iter / N));
 
-        // Cooling Schedule 2
-        //A = ((T0 - TN) * (N + 1.0)) / N;
-        //B = T0 - A;
-        //t_corrente = (A / (iter + 1.0)) + B;
+            // Cooling Schedule 2
+            //A = ((T0 - TN) * (N + 1.0)) / N;
+            //B = T0 - A;
+            //t_corrente = (A / (iter + 1.0)) + B;
 
-        // Cooling Schedule 3
-        //A = log(T0 - TN) / log(N); 
-        //t_corrente = T0 - pow(iter, A);
+            // Cooling Schedule 3
+            //A = log(T0 - TN) / log(N); 
+            //t_corrente = T0 - pow(iter, A);
 
-        // Cooling Schedule 4 (Sigmoid)
-        // t_corrente = ((T0 - TN) / (1.0 + exp(3.0 * (iter - N / 2.0)))) + TN;
+            // Cooling Schedule 4 (Sigmoid)
+            // t_corrente = ((T0 - TN) / (1.0 + exp(3.0 * (iter - N / 2.0)))) + TN;
 
-        // Cooling Schedule 5
-        //t_corrente = 0.5 * (T0 - TN) * (1.0 + cos((iter * 3.14159265358979323846) / N)) + TN;
+            // Cooling Schedule 5
+            //t_corrente = 0.5 * (T0 - TN) * (1.0 + cos((iter * 3.14159265358979323846) / N)) + TN;
 
-        // Cooling Schedule 6
-        // t_corrente = 0.5 * (T0 - TN) * (1.0 - tanh((10.0 * iter) / N - 5.0)) + TN;
+            // Cooling Schedule 6
+            // t_corrente = 0.5 * (T0 - TN) * (1.0 - tanh((10.0 * iter) / N - 5.0)) + TN;
 
-        // Cooling Schedule 7
-         t_corrente = ((T0 - TN) / cosh((10.0 * iter) / N)) + TN;
+            // Cooling Schedule 7
+             t_corrente = ((T0 - TN) / cosh((10.0 * iter) / N)) + TN;
 
-        // Cooling Schedule 8
-        // A = (1.0 / N) * log(T0 / TN);
-        // t_corrente = T0 * exp(-A * iter);
+            // Cooling Schedule 8
+            // A = (1.0 / N) * log(T0 / TN);
+            // t_corrente = T0 * exp(-A * iter);
 
-        // Cooling Schedule 9
-        // A = (1.0 / (N * N)) * log(T0 / TN);
-        // t_corrente = T0 * exp(-A * iter * iter);
+            // Cooling Schedule 9
+            // A = (1.0 / (N * N)) * log(T0 / TN);
+            // t_corrente = T0 * exp(-A * iter * iter);
 
-        // Formula Original
-        //t_corrente = T0 * pow((1.0 - (iter / N)), 5.0);
-        
-        if (t_corrente < 1e-10) {
-            t_corrente = 1e-10;
+            // Formula Original
+            //t_corrente = T0 * pow((1.0 - (iter / N)), 5.0);
+            
+            if (t_corrente < 1e-10) {
+                t_corrente = 1e-10;
+            }
         }
 
         atribui_vetor(valores_vizinho, valores_atual, ESCALA);
@@ -281,8 +288,8 @@ int main() {
 
         inicia_valores(valores); 
         
-        // 2. Executa a otimização
-        annealing(valores, dados, ITERACOES, (i+1));
+        // 2. Executa a otimização (Passando a macro SAMAX como parâmetro)
+        annealing(valores, dados, ITERACOES, (i+1), SAMAX);
         
         // 3. Avalia e guarda o resultado
         temp = calcula_qualidade(valores, dados);

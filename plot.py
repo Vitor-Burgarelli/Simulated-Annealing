@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 # Lê os dados gerados pelo código em C
 # LEMBRAR DE MUDAR PARA O ARQUIVO QUE ESTIVER LENDO NA HORA
-df = pd.read_csv("convergencia_sem_t0.csv")
+df = pd.read_csv("convergencia_com_t0.csv")
 
 plt.figure(figsize=(10, 6))
 
